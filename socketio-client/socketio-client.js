@@ -58,6 +58,7 @@ module.exports = function(RED) {
       this.socketId = null;
 
       var node = this;
+      
 
       node.on('input', function(msg){
         node.socketId = msg.payload.socketId;
@@ -88,6 +89,7 @@ module.exports = function(RED) {
     function SocketIOEmitter(n){
       RED.nodes.createNode(this, n);
       this.name = n.name;
+      this.message = n.message;
      /*    this.eventName = n.eventname;*/
       this.socketId = null;
 
@@ -95,14 +97,23 @@ module.exports = function(RED) {
 
       node.on('input', function(msg){
         node.socketId = msg.payload.socketId;
-        node.eventName = msg.payload.eventName;
-        node.message = msg.payload.message;
-        if(msg.payload.message != null){
-               sockets[node.socketId].emit(node.eventName, node.message || '' );
+
+        if(msg.payload.eventName != null){
+          node.status({fill:'green',shape:'dot',text:'emit '+ msg.payload.eventName });
+          if(msg.payload.message){
+            sockets[node.socketId].emit(msg.payload.eventName, msg.payload.message );
+          }else{
+            sockets[node.socketId].emit(msg.payload.eventName);
+          }
         }else if(msg.payload.eventName == null){
-          node.status({fill:'red',shape:'ring',text:'event null'});    
-        }else if(msg.payload.message == null){
-          node.status({fill:'red',shape:'ring',text:'message null'});    
+          node.status({fill:'green',shape:'dot',text:'emit '+ node.name });
+          if (node.message){
+            sockets[node.socketId].emit(node.name, node.message );
+          }else{
+            sockets[node.socketId].emit(node.name);
+          }
+        }else {
+          node.status({fill:'red',shape:'ring',text:'not send'});    
         }
       });
     }
