@@ -20,13 +20,14 @@ module.exports = function(RED) {
       this.server.namespace = n.namespace;
       this.name = n.name;
       var node = this;
+      // console.log(node)
 
       
       if(sockets[node.id]){ delete sockets[node.id];}
       sockets[node.id] = connect(this.server);
-
+      // console.log(sockets[node.id])
       sockets[node.id].on('connect', function(){
-        console.log({socketId:node.id})
+        // console.log({socketId:node.id})
         node.send({ payload:{socketId:node.id, status:'connected'} });
         node.status({fill:"green",shape:"dot", text:"connected"});
       });
@@ -99,23 +100,26 @@ module.exports = function(RED) {
 
       node.on('input', function(msg){
         node.socketId = msg.payload.socketId;
-
-        if(msg.payload.eventName != null){
-          node.status({fill:'green',shape:'dot',text:'emit '+ msg.payload.eventName });
-          if(msg.payload.message){
-            sockets[node.socketId].emit(msg.payload.eventName, msg.payload.message );
-          }else{
-            sockets[node.socketId].emit(msg.payload.eventName);
+        if(msg.payload.status == 'connected'){
+          if(msg.payload.eventName != null){
+            node.status({fill:'green',shape:'dot',text:'emit '+ msg.payload.eventName });
+            if(msg.payload.message){
+              sockets[node.socketId].emit(msg.payload.eventName, msg.payload.message );
+            }else{
+              sockets[node.socketId].emit(msg.payload.eventName);
+            }
+          }else if(msg.payload.eventName == null){
+            node.status({fill:'green',shape:'dot',text:'emit '+ node.name });
+            if (node.message){
+              sockets[node.socketId].emit(node.name, node.message );
+            }else{
+              sockets[node.socketId].emit(node.name);
+            }
+          }else {
+            node.status({fill:'red',shape:'ring',text:'not send'});    
           }
-        }else if(msg.payload.eventName == null){
-          node.status({fill:'green',shape:'dot',text:'emit '+ node.name });
-          if (node.message){
-            sockets[node.socketId].emit(node.name, node.message );
-          }else{
-            sockets[node.socketId].emit(node.name);
-          }
-        }else {
-          node.status({fill:'red',shape:'ring',text:'not send'});    
+        }else{
+          node.status({fill:'red',shape:'ring',text:'disconnected'});
         }
       });
     }
