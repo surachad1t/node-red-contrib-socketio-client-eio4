@@ -1,6 +1,7 @@
 module.exports = function(RED) {
   'use strict';
-  //var io = require('socket.io-client');
+
+  var io = require('socket.io-client');
   var sockets = {};
 
   /* sckt config */
@@ -23,8 +24,9 @@ module.exports = function(RED) {
       
       if(sockets[node.id]){ delete sockets[node.id];}
       sockets[node.id] = connect(this.server);
-        
+
       sockets[node.id].on('connect', function(){
+        console.log({socketId:node.id})
         node.send({ payload:{socketId:node.id, status:'connected'} });
         node.status({fill:"green",shape:"dot", text:"connected"});
       });
@@ -123,6 +125,11 @@ module.exports = function(RED) {
     var uri = config.host;
     var sckt;
     var options = {};
+    options.transports = ["websocket", "polling"];
+    options.upgrade = true;
+    options.forceBase64 = false;
+    options.reconnection = true;
+
 
     if(config.port != ''){
       uri += ':' +  config.port;
@@ -132,9 +139,11 @@ module.exports = function(RED) {
     }
     if(config.namespace){
       uri += '/' +  config.namespace;
-      sckt = require('socket.io-client').connect( uri, options );
+      const socket = io( uri, options );
+      sckt = socket.connect();
     }else{
-      sckt = require('socket.io-client')( uri, options );
+      const socket = io( uri, options );
+      sckt = socket.connect();
     }
     return sckt;
   }
