@@ -117,7 +117,7 @@ module.exports = function(RED) {
           if(msg.payload.eventName != null){
             node.status({fill:'green',shape:'dot',text:'emit '+ msg.payload.eventName });
             if(msg.payload.message){
-              sockets[this.emitid].emit(msg.payload.eventName, JSON.parse(msg.payload.message));
+              sockets[this.emitid].emit(msg.payload.eventName, msg.payload.message);
             }else{
               sockets[this.emitid].emit(msg.payload.eventName);
             }
