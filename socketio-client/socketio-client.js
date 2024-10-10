@@ -25,31 +25,32 @@ module.exports = function(RED) {
       var node = this;
       // console.log(node)
 
-      
-      if(sockets[node.id]){ delete sockets[node.id];}
-      sockets[node.id] = connect(this.server);
-      
-      current_socket.push({"name":this.server.name,"id":node.id});
-      // console.log(current_socket)
-      // console.log(sockets[node.id])
-      sockets[node.id].on('connect', function(){
-        // console.log({socketId:node.id})        
-        node.send({ payload:{socketId:node.id, status:'connected'} });
-        node.status({fill:"green",shape:"dot", text:"connected"});
-      });
+      node.on('input', function(msg){  
+        // if(sockets[node.id]){ delete sockets[node.id];}
+        sockets[node.id] = connect(this.server);
+        
+        current_socket.push({"name":this.server.name,"id":node.id});
+        console.log(current_socket)
+        // console.log(sockets[node.id])
+        sockets[node.id].on('connect', function(){
+          // console.log({socketId:node.id})        
+          node.send({ payload:{socketId:node.id, status:'connected'} });
+          node.status({fill:"green",shape:"dot", text:"connected"});
+        });
 
-      sockets[node.id].on('disconnect', function(){
-        node.send({payload:{socketId:node.id, status:'disconnected'}});
-        node.status({fill:'red',shape:'ring', text:'disconnected'});
-      });
-
-      sockets[node.id].on('connect_error', function(err) {
-        if (err) {
-          node.status({fill:'red',shape:'ring',text:'disconnected'});
+        sockets[node.id].on('disconnect', function(){
           node.send({payload:{socketId:node.id, status:'disconnected'}});
-          //node.error(err);
-        }
-      }); 
+          node.status({fill:'red',shape:'ring', text:'disconnected'});
+        });
+
+        sockets[node.id].on('connect_error', function(err) {
+          if (err) {
+            node.status({fill:'red',shape:'ring',text:'disconnected'});
+            node.send({payload:{socketId:node.id, status:'disconnected'}});
+            //node.error(err);
+          }
+        }); 
+      });
 
       this.on('close', function(done) {
         sockets[node.id].disconnect();
@@ -58,6 +59,40 @@ module.exports = function(RED) {
       }); 
     }
     RED.nodes.registerType('socketio-connector', SocketIOConnector);
+
+  /* sckt connector*/
+  function SocketIODisconnect(n){
+    RED.nodes.createNode(this, n);
+    this.server = RED.nodes.getNode(n.server);
+    // this.server.namespace = n.namespace;
+    // console.log(this.server.name)
+    // this.name = n.node_name;
+    var node = this;
+    // console.log(node)
+
+    node.on('input', function(msg){  
+      var sv_name = this.server.name;
+      current_socket.forEach(element => {
+        if(this.server.name == element["name"] )
+          // console.log(element["id"])
+          this.disconid = element["id"]
+      });
+      sockets[this.disconid].disconnect();
+
+      current_socket = current_socket.filter(function(item){
+        return item.name !== sv_name 
+      })
+      // console.log(sockets.connected);
+    });
+
+    this.on('close', function(done) {
+      sockets[node.id].disconnect();
+      node.status({});
+      done();
+    }); 
+  }
+  RED.nodes.registerType('socketio-disconnect', SocketIODisconnect);  
+
 
   /* sckt listener*/
     function SocketIOListener(n){
@@ -105,19 +140,21 @@ module.exports = function(RED) {
       this.socketId = null;
 
       var node = this;
-      // console.log(current_socket)
-      current_socket.forEach(element => {
-        if(this.server.name == element["name"] )
-          // console.log(element["id"])
-          this.emitid = element["id"]
-      });
+      
       
       node.on('input', function(msg){
+          // console.log(current_socket)
+          current_socket.forEach(element => {
+            if(this.server.name == element["name"] )
+              // console.log(element["id"])
+              this.emitid = element["id"]
+          });
+
         // node.socketId = msg.payload.socketId;
           if(msg.payload.eventName != null){
             node.status({fill:'green',shape:'dot',text:'emit '+ msg.payload.eventName });
             if(msg.payload.message){
-              sockets[this.emitid].emit(msg.payload.eventName, msg.payload.message);
+              sockets[this.emitid].emit(msg.payload.eventName, JSON.parse(msg.payload.message));
             }else{
               sockets[this.emitid].emit(msg.payload.eventName);
             }
@@ -142,7 +179,7 @@ module.exports = function(RED) {
     options.transports = ["websocket", "polling"];
     options.upgrade = true;
     options.forceBase64 = false;
-    options.reconnection = true;
+    options.reconnection = false;
 
 
     if(config.port != ''){
