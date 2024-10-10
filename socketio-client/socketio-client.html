@@ -54,7 +54,7 @@
   /*global RED*/
   RED.nodes.registerType('socketio-connector', {
     category: 'SocketIO',
-    inputs: 0,
+    inputs: 1,
     outputs: 1,
     color: "#D8BFD8",
     icon: "socketio.png",
@@ -95,6 +95,50 @@
 </script>
 
 <script type="text/x-red" data-help-name="socketio-connector">
+  <p>Socket.IO Connector</p>
+  <p>Provides a client for Socket.IO server</p>
+  <p>It's works only in couple with Socket.io Listener, bacause of this its output will be util only to a Socket.io Listener</p>
+  <pre>Socket.IO Connector -> Socket.IO Listener -> Payload</pre>
+</script>
+
+<!-- Disconnect -->
+<script type="text/javascript">
+  /*global RED*/
+  RED.nodes.registerType('socketio-disconnect', {
+    category: 'SocketIO',
+    inputs: 1,
+    outputs: 1,
+    color: "#D8BFD8",
+    icon: "socketio.png",
+    paletteLabel: "socketio disconnect",
+    defaults: {
+      server: {
+        value: "",
+        type: "socketio-config"
+      },
+      node_name: {
+        value: "",
+        required:false
+      }
+    },
+    label: function() {
+        return this.node_name || "Socket.IO Disconnect";
+    }
+  });
+</script>
+
+<script type="text/x-red" data-template-name="socketio-disconnect">
+  <div class="form-row">
+    <label for="node-input-server"><i class="fa fa-globe"></i> Server</label>
+    <input type="text" id="node-input-server" placeholder="Server">
+  </div>
+  <div class="form-row">
+    <label for="node-input-node_name"><i class="fa fa-tag"></i> Name</label>
+    <input type="text" id="node-input-node_name" placeholder="Name">
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="socketio-disconnect">
   <p>Socket.IO Connector</p>
   <p>Provides a client for Socket.IO server</p>
   <p>It's works only in couple with Socket.io Listener, bacause of this its output will be util only to a Socket.io Listener</p>
