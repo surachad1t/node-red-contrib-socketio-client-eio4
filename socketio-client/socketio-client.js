@@ -26,7 +26,11 @@ module.exports = function(RED) {
       // console.log(node)
 
       node.on('input', function(msg){  
-        // if(sockets[node.id]){ delete sockets[node.id];}
+        if(sockets[node.id]){ 
+          sockets[node.id].disconnect();
+          delete sockets[node.id];
+          current_socket = []
+        }
         sockets[node.id] = connect(this.server);
         
         current_socket.push({"name":this.server.name,"id":node.id});
