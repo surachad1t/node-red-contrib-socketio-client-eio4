@@ -26,20 +26,26 @@ module.exports = function(RED) {
       // console.log(node)
 
       node.on('input', function(msg){  
+        console.log("=======CONNECTION=====")
+        //handel last connection and disconnect
         if(sockets[node.id]){ 
           sockets[node.id].disconnect();
-          delete sockets[node.id];
-          current_socket = []
+          // delete sockets[node.id];
+          // current_socket = []
+          current_socket = current_socket.filter(function(item){
+            return item.id !== node.id 
+          })
         }
         sockets[node.id] = connect(this.server);
-        
-        current_socket.push({"name":this.server.name,"id":node.id});
-        console.log(current_socket)
+
         // console.log(sockets[node.id])
         sockets[node.id].on('connect', function(){
-          // console.log({socketId:node.id})        
+          // console.log("node : ",node)       
+          current_socket.push({"name":node.server.name,"id":node.id,"socid":node.server.id});
+          console.log("Connection : ",current_socket)
           node.send({ payload:{socketId:node.id, status:'connected'} });
           node.status({fill:"green",shape:"dot", text:"connected"});
+          
         });
 
         sockets[node.id].on('disconnect', function(){
@@ -54,6 +60,8 @@ module.exports = function(RED) {
             //node.error(err);
           }
         }); 
+         
+        
       });
 
       this.on('close', function(done) {
@@ -69,24 +77,28 @@ module.exports = function(RED) {
     RED.nodes.createNode(this, n);
     this.server = RED.nodes.getNode(n.server);
     // this.server.namespace = n.namespace;
-    // console.log(this.server.name)
+    // console.log(this.server)
     // this.name = n.node_name;
     var node = this;
     // console.log(node)
 
     node.on('input', function(msg){  
-      var sv_name = this.server.name;
+      console.log("=======DISCONNECT======")
+      console.log(this.server)
+      var sv_socid = this.server.id;
       current_socket.forEach(element => {
-        if(this.server.name == element["name"] )
-          // console.log(element["id"])
+        if(this.server.id == element["socid"] ){
+          console.log("dis element",element["socid"])
           this.disconid = element["id"]
+          sockets[this.disconid].disconnect();
+        }
       });
-      sockets[this.disconid].disconnect();
+      
 
       current_socket = current_socket.filter(function(item){
-        return item.name !== sv_name 
+        return item.socid !== sv_socid 
       })
-      // console.log(sockets.connected);
+      console.log(current_socket);
     });
 
     this.on('close', function(done) {
@@ -109,6 +121,8 @@ module.exports = function(RED) {
       
 
       node.on('input', function(msg){
+        // console.log(node)
+        // console.log(msg.payload)
         node.socketId = msg.payload.socketId;
         if(!msg.payload.eventname){
           node.eventName = n.eventname;
@@ -148,30 +162,52 @@ module.exports = function(RED) {
       
       node.on('input', function(msg){
           // console.log(current_socket)
+          // console.log("NODE:" ,node)
+          console.log("=======EMIT=====")
+          console.log("NODE SerVER ID: ", node.server.id)
+          console.log("Current Socket:",current_socket)
           current_socket.forEach(element => {
-            if(this.server.name == element["name"] )
-              // console.log(element["id"])
+            if(element["socid"]  == node.server.id ){
+              console.log("EMIT ELEMENT : ",element)
+              // console.log(element.socid)
               this.emitid = element["id"]
+
+
+              console.log("SEND to: ",this.emitid)
+              if(msg.payload.eventName != null){
+                // console.log(msg.payload)
+                node.status({fill:'green',shape:'dot',text:'emit '+ msg.payload.eventName });
+                if(msg.payload.message!= '{}'){
+                  sockets[this.emitid].emit(msg.payload.eventName, JSON.parse(msg.payload.message));
+                }else{
+                  if(msg.payload.msgsocket!= ""){
+                    sockets[this.emitid].emit(msg.payload.eventName, msg.payload.msgsocket);
+                  }
+                  else{
+                  sockets[this.emitid].emit(msg.payload.eventName);
+                  }
+                }
+              }else if(msg.payload.eventName == null){
+                // console.log(msg.payload.msgsocket)
+                // console.log(node)
+                node.status({fill:'green',shape:'dot',text:'emit '+ node.name });
+                if (node.message != '{}'){
+                  sockets[this.emitid].emit(node.name, JSON.parse(node.message) );
+                }else{
+                  if(msg.payload.msgsocket!= ""){
+                    sockets[this.emitid].emit(node.name, msg.payload.msgsocket);
+                  }
+                  else{
+                  sockets[this.emitid].emit(node.name);
+                  }
+                }
+              }else {
+                node.status({fill:'red',shape:'ring',text:'not send'});    
+              }
+            }
           });
 
-        // node.socketId = msg.payload.socketId;
-          if(msg.payload.eventName != null){
-            node.status({fill:'green',shape:'dot',text:'emit '+ msg.payload.eventName });
-            if(msg.payload.message){
-              sockets[this.emitid].emit(msg.payload.eventName, JSON.parse(msg.payload.message));
-            }else{
-              sockets[this.emitid].emit(msg.payload.eventName);
-            }
-          }else if(msg.payload.eventName == null){
-            node.status({fill:'green',shape:'dot',text:'emit '+ node.name });
-            if (node.message){
-              sockets[this.emitid].emit(node.name, JSON.parse(node.message) );
-            }else{
-              sockets[this.emitid].emit(node.name);
-            }
-          }else {
-            node.status({fill:'red',shape:'ring',text:'not send'});    
-          }
+        
       });
     }
     RED.nodes.registerType('socketio-emitter', SocketIOEmitter);
